@@ -95,7 +95,15 @@ app.get('/incidents', (req, res) => {
     let neighborhood = url.searchParams.get('neighborhood');
     let limit = url.searchParams.get('limit');
 
-    if (codes) {
+    if (start_date) {
+        start_date += "T00:00:00";
+        query += " WHERE date_time >= ?";
+        params = start_date;
+    } else if (end_date) {
+        end_date += "T23:59:59";
+        query += " WHERE date_time <= ?";
+        params = end_date;
+    } else if (codes) {
         params = codes.split(',');
         query += " WHERE code = ?";
 
