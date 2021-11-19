@@ -3,13 +3,23 @@
     "version": "0.0.0",
     "description": "RESTful Web Server and Single Page Application",
     "author": {
-        "name": "",
-        "email": ""
+        "name": "Aaron Gartner",
+        "email": "gart1353@stthomas.edu"
     },
+    "contributors": [
+        {
+            "name": "Joe Cyriac",
+            "email": "cyri6208@stthomas.edu"
+        },
+        {
+            "name": "Brandon Torralba",
+            "email": "torr4112@stthomas.edu"
+        }
+    ],
     "main": "server.js",
     "repository": {
         "type": "git",
-        "url": ""
+        "url": "https://github.com/Aaron-Gartner/crime_stats"
     },
     "dependencies": {
         "express": "^4.17.1",
