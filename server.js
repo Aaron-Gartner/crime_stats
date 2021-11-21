@@ -86,47 +86,66 @@ app.get('/neighborhoods', (req, res) => {
 app.get('/incidents', (req, res) => {
     let url = new URL(req.protocol + '://' + req.get('host') + req.originalUrl);
     let query = "SELECT * from Incidents ";
-    let params;
+    let params = [];
 
     let start_date = url.searchParams.get('start_date');
     let end_date = url.searchParams.get('end_date');
     let codes = url.searchParams.get('code');
-    let grid = url.searchParams.get('grid');
-    let neighborhood = url.searchParams.get('neighborhood');
+    let grids = url.searchParams.get('grid');
+    let neighborhoods = url.searchParams.get('neighborhood');
     let limit = url.searchParams.get('limit');
+
+    let queryWheres = [];
 
     if (start_date) {
         start_date += "T00:00:00";
-        query += " WHERE date_time >= ?";
-        params = start_date;
-    } else if (end_date) {
+        queryWheres.push(" date_time >= ?");
+        params.push(start_date);
+    } 
+    
+    if (end_date) {
         end_date += "T23:59:59";
-        query += " WHERE date_time <= ?";
-        params = end_date;
-    } else if (codes) {
-        params = codes.split(',');
-        query += " WHERE code = ?";
-
-        for (let i = 1; i < params.length; i++) {
-            query += " OR code = ?";
+        queryWheres.push(" date_time <= ?");
+        params.push(end_date);
+    }
+    
+    if (codes) {
+        let innerWheres = [];
+        let parts = codes.split(',');
+        for (let i = 0; i < parts.length; i++) {
+            innerWheres.push(" code = ?");
+            params.push(parts[i]);
         }
-    } else if (grid) {
-        params = grid.split(',');
-        query += " WHERE police_grid = ?";
-        
-        for (let i = 1; i < params.length; i++) {
-            query += " OR police_grid = ?";
+        queryWheres.push('( ' + innerWheres.join(" OR ") + ') ');
+    }
+    
+    if (grids) {
+        let innerWheres = [];
+        let parts = grids.split(',');
+        for (let i = 0; i < parts.length; i++) {
+            innerWheres.push(" police_grid = ?");
+            params.push(parts[i]);
         }
-    } else if (neighborhood) {
-        params = neighborhood.split(',');
-        query += " WHERE neighborhood_number = ?";
-
-        for (let i = 1; i < params.length; i++) {
-            query += " OR neighborhood_number = ?";
+        queryWheres.push('( ' + innerWheres.join(" OR ") + ') ');
+    }
+    
+    if (neighborhoods) {        
+        let innerWheres = [];
+        let parts = neighborhoods.split(',');
+        for (let i = 0; i < parts.length; i++) {
+            innerWheres.push(" neighborhood_number = ?");
+            params.push(parts[i]);
         }
+        queryWheres.push('(' + innerWheres.join(" OR ") + ') ');
     }
 
-    query += 'ORDER BY date_time ASC';
+    if (queryWheres.length > 0) {
+        query += "WHERE " + queryWheres.join(" AND ");
+    }
+    
+    query += ' ORDER BY date_time ASC';
+
+
     if (limit) {
         query += ` LIMIT ${limit}`;
     } else {
@@ -238,7 +257,7 @@ function databaseDelete(query, params) {
                     }
                 });
             } else {
-                reject('ERROR: Could not delete incident');
+                reject('ERROR: Could not delete incident\nThat incident does not exist');
             }
         });
     });
