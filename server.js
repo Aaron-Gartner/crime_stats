@@ -143,7 +143,7 @@ app.get('/incidents', (req, res) => {
         query += "WHERE " + queryWheres.join(" AND ");
     }
     
-    query += ' ORDER BY date_time ASC';
+    query += ' ORDER BY date_time DESC';
 
 
     if (limit) {
