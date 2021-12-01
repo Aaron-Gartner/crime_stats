@@ -50,29 +50,34 @@ function init() {
     }).addTo(map);
     map.setMaxBounds([[44.883658, -93.217977], [45.008206, -92.993787]]);
 
+    // adding markers to neighborhood_markers array
     for (let i = 0; i < neighborhood_markers.length; i++) {
-        var popup = L.popup().setLatLng(neighborhood_markers[i].location);
         var marker = L.marker(neighborhood_markers[i].location).addTo(map);
-        console.log(neighborhood_markers[i]);
-
-        let count = 0;
-        getJSON('/incidents').then((result) => {
-            for (let j = 0; j < result.length; j++) {
-                if (parseInt(result['neighborhood_number']) === i + 1) {
-                    count++;
-                }
-            }
-
-            popup.setContent(count);
-            marker.bindPopup(popup);
-        }).catch((error) => {
-            console.log(error);
-        });
-
-
+        neighborhood_markers[i].marker = marker;
     }
 
-    
+    // initializing array for neighborhood numbers
+    var neighborhoodIncidents = [];
+    for (let i = 0; i < neighborhood_markers.length + 1; i++) {
+        neighborhoodIncidents.push(0);
+    }
+
+    // query data to figure out how many incidents occurred in each neighborhood
+    getJSON(`${crime_url}/incidents`).then((result) => {
+        for (let i = 0; i < result.length; i++) {
+            let currentNeighborhood = parseInt(result[i].neighborhood_number);
+            neighborhoodIncidents[currentNeighborhood]++;
+        }
+
+        for (let i = 0; i < neighborhood_markers.length; i++) {
+            var popup = L.popup().setLatLng(neighborhood_markers[i].location);
+            popup.setContent('Incidents: ' + neighborhoodIncidents[i+1]);
+            neighborhood_markers[i].marker.bindPopup(popup);
+        }
+    }).catch((error) => {
+        console.log(error);
+    });
+
     let district_boundary = new L.geoJson();
     district_boundary.addTo(map);
 
