@@ -25,6 +25,7 @@ let db = new sqlite3.Database(db_filename, sqlite3.OPEN_READWRITE, (err) => {
 });
 
 app.use(express.json());
+app.use(express.static(public_dir));
 
 
 // REST API: GET /codes
