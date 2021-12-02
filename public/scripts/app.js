@@ -1,5 +1,7 @@
 let app;
 let map;
+var crime_url = 'http://localhost:8000';
+
 let neighborhood_markers = 
 [
     {location: [44.942068, -93.020521], marker: null},
@@ -22,8 +24,6 @@ let neighborhood_markers =
 ];
 
 function init() {
-    let crime_url = 'http://localhost:8000';
-
     app = new Vue({
         el: '#app',
         data: {
@@ -38,7 +38,9 @@ function init() {
                     nw: {lat: 45.008206, lng: -93.217977},
                     se: {lat: 44.883658, lng: -92.993787}
                 }
-            }
+            },
+            incidents: [],
+            location_search: ''
         }
     });
 
@@ -56,28 +58,6 @@ function init() {
         neighborhood_markers[i].marker = marker;
     }
 
-    // initializing array for neighborhood numbers
-    var neighborhoodIncidents = [];
-    for (let i = 0; i < neighborhood_markers.length + 1; i++) {
-        neighborhoodIncidents.push(0);
-    }
-
-    // query data to figure out how many incidents occurred in each neighborhood
-    getJSON(`${crime_url}/incidents`).then((result) => {
-        for (let i = 0; i < result.length; i++) {
-            let currentNeighborhood = parseInt(result[i].neighborhood_number);
-            neighborhoodIncidents[currentNeighborhood]++;
-        }
-
-        for (let i = 0; i < neighborhood_markers.length; i++) {
-            var popup = L.popup().setLatLng(neighborhood_markers[i].location);
-            popup.setContent('Incidents: ' + neighborhoodIncidents[i+1]);
-            neighborhood_markers[i].marker.bindPopup(popup);
-        }
-    }).catch((error) => {
-        console.log(error);
-    });
-
     let district_boundary = new L.geoJson();
     district_boundary.addTo(map);
 
@@ -85,6 +65,7 @@ function init() {
         // St. Paul GeoJSON
         $(result.features).each(function(key, value) {
             district_boundary.addData(value);
+            console.log(result.features);
         });
     }).catch((error) => {
         console.log('Error:', error);
@@ -104,4 +85,39 @@ function getJSON(url) {
             }
         });
     });
+}
+
+function LocationSearch(event) {
+    if (app.location_search !== '') {
+        let request = {
+            url: `${crime_url}/incidents`,
+            dataType: 'json',
+            success: LocationData
+        }
+        $.ajax(request);
+    } else {
+        app.location_search = '';
+    }
+
+}
+
+function LocationData(data) {
+    app.incidents = data;
+    console.log(data);
+
+    var neighborhoodIncidents = [];
+    for (let i = 0; i < neighborhood_markers.length + 1; i++) {
+        neighborhoodIncidents.push(0);
+    }
+
+    for (let i = 0; i < data.length; i++) {
+        let currentNeighborhood = parseInt(data[i].neighborhood_number);
+        neighborhoodIncidents[currentNeighborhood]++;
+    }
+
+    for (let i = 0; i < neighborhood_markers.length; i++) {
+        var popup = L.popup().setLatLng(neighborhood_markers[i].location);
+        popup.setContent('Incidents: ' + neighborhoodIncidents[i+1]);
+        neighborhood_markers[i].marker.bindPopup(popup);
+    }
 }

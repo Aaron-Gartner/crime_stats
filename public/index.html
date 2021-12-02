@@ -22,13 +22,54 @@
 
     <!-- Application -->
     <link rel="stylesheet" href="css/style.css"/>
+    <link rel="stylesheet" href="css/foundation.css"/>
     <script type="application/javascript" src="scripts/app.js"></script>
     <!-- End: Application -->
 </head>
 <body onload="init()">
     <!-- Main app -->
-    <div id="app">
+    <div id="app" class="grid-container">
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <ul class="menu">
+                    <li><a href="/index.html">Home</a></li>
+                    <li><a href="/about.html">About</a></li>
+                </ul>
+            </div>
+
+            <div class="top-bar-right">
+                <input v-model="location_search" placeholder="Enter a location..." class="input"/>
+                <button type="button" @click="LocationSearch" class="button">Go!</button>
+            </div>
+        </div>
+        <br />
+
         <div id="leafletmap"></div>
+        <hr /> <br />
+        <table id="table" v-if="incidents.length > 0" class="table-responsive">
+            <tr>
+                <th>Case Number</th>
+                <th>Incident Type</th>
+                <th>Incident Description</th>
+                <th>Police Grid</th>
+                <th>Neighborhood</th>
+                <th>Block</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th></th>
+            </tr>
+            <tr v-for="incident in incidents">
+                <td>{{ incident.case_number }}</td>
+                <td>{{ incident.code }}</td>
+                <td>{{ incident.incident }}</td>
+                <td>{{ incident.police_grid }}</td>
+                <td>{{ incident.neighborhood_number }}</td>
+                <td>{{ incident.block }}</td>
+                <td>{{ incident.date }}</td>
+                <td>{{ incident.time }}</td>
+                <td><button class="ui-button">Add Marker</button></td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>
