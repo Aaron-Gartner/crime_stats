@@ -50,7 +50,6 @@
             <tr>
                 <th>Case Number</th>
                 <th>Incident Type</th>
-                <th>Incident Description</th>
                 <th>Police Grid</th>
                 <th>Neighborhood</th>
                 <th>Block</th>
@@ -58,15 +57,14 @@
                 <th>Time</th>
                 <th></th>
             </tr>
-            <tr v-for="incident in incidents">
+            <tr v-for="incident in incidents" style="text-align: center;">
                 <td>{{ incident.case_number }}</td>
-                <td>{{ incident.code }}</td>
                 <td>{{ incident.incident }}</td>
                 <td>{{ incident.police_grid }}</td>
-                <td>{{ incident.neighborhood_number }}</td>
+                <td>{{ incident.neighborhood_name }}</td>
                 <td>{{ incident.block }}</td>
                 <td>{{ incident.date }}</td>
-                <td>{{ incident.time }}</td>
+                <td>{{ incident.time.split('.')[0] }}</td>
                 <td><button class="ui-button">Add Marker</button></td>
             </tr>
         </table>
