@@ -78,28 +78,106 @@ function init() {
     [45.008206, -92.993787],
   ]);
 
-  map.on("moveend", () => {
-    console.log(map.getCenter());
+  map.on('moveend', () => {
+    if (app.location_search !== '') {
+      let url = `https://nominatim.openstreetmap.org/reverse?lat=${map.getCenter().lat}&lon=${map.getCenter().lng}&format=jsonv2&limit=25&accept-language=en`;
+      getJSON(url).then((data) => {
+        console.log(data);
+        if (data.name) {
+          app.location_search = data.name;
+        } else {
+          app.location_search = data.display_name;
+        }
+      }).catch((error) => {
+        console.log(error);
+      });
+
+      //app.location_search = `${map.getCenter().lat},${map.getCenter().lng}`;
+
+      console.log(map.getCenter());
+      console.log(map.getBounds());
+  
+      let maxLat = map.getBounds()._northEast.lat;
+      let minLat = map.getBounds()._southWest.lat;
+      let maxLong = map.getBounds()._northEast.lng;
+      let minLong = map.getBounds()._southWest.lng;
+  
+      let visibleNeighborhoods = [];
+      for (let i = 0; i < neighborhood_markers.length; i++) {
+        let currentLat = neighborhood_markers[i].location[0];
+        let currentLong = neighborhood_markers[i].location[1];
+
+        if (currentLat <= maxLat && currentLat >= minLat && currentLong <= maxLong && currentLong >= minLong) {
+          visibleNeighborhoods.push(i+1);
+        }
+      }
+/*
+      if (visibleNeighborhoods.length == 0) {
+        for (let i = 0; i < neighborhood_markers.length; i++) {
+          let currentLat = neighborhood_markers[i].location[0];
+          let currentLong = neighborhood_markers[i].location[1];
+  
+          let countTrue = 0;
+          if (currentLat <= maxLat) {
+            countTrue++;
+          }
+  
+          if (currentLat >= minLat) {
+            countTrue++;
+          }
+  
+          if (currentLong <= maxLong) {
+            countTrue++;
+          }
+  
+          if (currentLong >= minLong) {
+            countTrue++;
+          }
+  
+          if (countTrue >= 3) {
+            visibleNeighborhoods.push(i+1);
+          }
+        }
+      }*/
+
+      console.log(visibleNeighborhoods);
+      getJSON(`${crime_url}/neighborhoods?id=${visibleNeighborhoods.join(',')}`).then((neighborhoodData) => {
+        let neighborhoodNames = [];
+        for (let i = 0; i < neighborhoodData.length; i++) {
+          neighborhoodNames[neighborhoodData[i].neighborhood_number] = neighborhoodData[i].neighborhood_name;
+        }
+
+        if (app.location_search !== "") {
+          let request = {
+            url: `${crime_url}/incidents?neighborhood=${visibleNeighborhoods.join(',')}`,
+            dataType: "json",
+            success: function(data) {
+              for (let i = 0; i < data.length; i++) {
+                data[i]['neighborhood_name'] = neighborhoodNames[data[i].neighborhood_number];
+              }
+              LocationData(data);
+            },
+            error: function(error) {
+              console.log(error);
+            }
+          };
+          $.ajax(request);
+        } else {
+          app.location_search = "";
+        }
+      });
+    }
   });
 
   let district_boundary = new L.geoJson();
   district_boundary.addTo(map);
 
   // Create object of neighborhoods that contains all the lat lng reference points for each neighborhood
-  var neighborhoods = {};
   getJSON("data/StPaulDistrictCouncil.geojson")
     .then((result) => {
       // St. Paul GeoJSON
       $(result.features).each(function (key, value) {
         district_boundary.addData(value);
-        console.log(value);
-        neighborhoods[`${value.properties.district}`] = [];
-        let coordinates = value.geometry.coordinates;
-        console.log(coordinates);
-        for (let i = 0; i < coordinates[0][0].length; i++){
-            console.log('here');
-            neighborhoods[`${value.properties.district}`].push([coordinates[0][0][i][1], coordinates[0][0][i][0]]);
-        }
       });
     })
     .catch((error) => {
@@ -122,38 +200,9 @@ function getJSON(url) {
   });
 }
 
-function LocationSearch(event) {
-  if (app.location_search !== "") {
-    let request = {
-      url: `${crime_url}/incidents`,
-      dataType: "json",
-      success: LocationData,
-    };
-    $.ajax(request);
-  } else {
-    app.location_search = "";
-  }
-
-  geoLocate();
-}
-
 function LocationData(data) {
-
-  for (let i = 0; i < data.length; i++) {
-      let neighborhoodNumber = data[i].neighborhood_number;
-      getJSON(crime_url+`/neighborhoods?id=${neighborhoodNumber}`).then((data2) => {
-          data[i]['neighborhood_name'] = data2[0].neighborhood_name;
-      }).catch((error) => {
-          console.log(error);
-      });
-
-      if (i == data.length) {
-          app.forceUpdate();
-      }
-  }
-  app.incidents = data;
-  //console.log(app.incidents[0]);
   console.log(data);
+  app.incidents = data;
 
   // adding markers to neighborhood_markers array
   for (let i = 0; i < neighborhood_markers.length; i++) {
@@ -185,29 +234,8 @@ function geoLocate() {
   getJSON(url)
     .then((data) => {
       if (data) {
-        console.log(data[0]);
         let latLng = [data[0].lat, data[0].lon];
-        map.flyTo(latLng, 15.5);
-        console.log(map.getBounds());
-
-        console.log(neighborhoods);
-
-        
-
-        /*
-        let parts = data[0].display_name.split(",");
-        let neighborhood;
-        for (let i = 0; i < parts; i++) {
-            if (neighborhood_names.indexOf(parts[i].trim()) > 0) {
-                console.log(parts[i]);
-                neighborhood = parts[i];
-            }
-        }
-        if (neighborhood == "Downtown") {
-          neighborhood = "Capitol River";
-        } else if (neighborhood.toLowerCase().includes("highland")) {
-          neighborhood = "Highland";
-        }*/
+        map = map.flyTo(latLng, 15.5);
       } else {
         console.log("error");
       }

@@ -39,7 +39,7 @@
 
             <div class="top-bar-right">
                 <input v-model="location_search" placeholder="Enter a location..." class="input"/>
-                <button type="button" @click="LocationSearch" class="button">Go!</button>
+                <button type="button" @click="geoLocate" class="button">Go!</button>
             </div>
         </div>
         <br />
@@ -50,7 +50,7 @@
             <tr>
                 <th>Case Number</th>
                 <th>Incident Type</th>
-                <th>Police Grid</th>
+                <!--<th>Police Grid</th>-->
                 <th>Neighborhood</th>
                 <th>Block</th>
                 <th>Date</th>
@@ -60,7 +60,7 @@
             <tr v-for="incident in incidents" style="text-align: center;">
                 <td>{{ incident.case_number }}</td>
                 <td>{{ incident.incident }}</td>
-                <td>{{ incident.police_grid }}</td>
+                <!--<td>{{ incident.police_grid }}</td>-->
                 <td>{{ incident.neighborhood_name }}</td>
                 <td>{{ incident.block }}</td>
                 <td>{{ incident.date }}</td>
