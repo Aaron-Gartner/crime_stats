@@ -2,6 +2,8 @@ let app;
 let map;
 var crime_url = "http://localhost:8000";
 
+var neighborhood_bounds = [];
+
 let neighborhood_markers = [
   { location: [44.942068, -93.020521], marker: null },
   { location: [44.977413, -93.025156], marker: null },
@@ -22,25 +24,7 @@ let neighborhood_markers = [
   { location: [44.949203, -93.093739], marker: null },
 ];
 
-const neighborhood_names = [
-  "Conway/Battlecreek/Highwood",
-  "Greater East Side",
-  "West Side",
-  "Dayton's Bluff",
-  "Payne/Phalen",
-  "North End",
-  "Thomas/Dale(Frogtown)",
-  "Summit/University",
-  "West Seventh",
-  "Como",
-  "Hamline/Midway",
-  "St. Anthony",
-  "Union Park",
-  "Macalester-Groveland",
-  "Highland",
-  "Summit Hill",
-  "Capitol River",
-];
+//const violentCrimes = [110,120,210,220,]
 
 function init() {
   app = new Vue({
@@ -78,97 +62,6 @@ function init() {
     [45.008206, -92.993787],
   ]);
 
-  map.on('moveend', () => {
-    if (app.location_search !== '') {
-      let url = `https://nominatim.openstreetmap.org/reverse?lat=${map.getCenter().lat}&lon=${map.getCenter().lng}&format=jsonv2&limit=25&accept-language=en`;
-      getJSON(url).then((data) => {
-        console.log(data);
-        if (data.name) {
-          app.location_search = data.name;
-        } else {
-          app.location_search = data.display_name;
-        }
-      }).catch((error) => {
-        console.log(error);
-      });
-
-      //app.location_search = `${map.getCenter().lat},${map.getCenter().lng}`;
-
-      console.log(map.getCenter());
-      console.log(map.getBounds());
-  
-      let maxLat = map.getBounds()._northEast.lat;
-      let minLat = map.getBounds()._southWest.lat;
-      let maxLong = map.getBounds()._northEast.lng;
-      let minLong = map.getBounds()._southWest.lng;
-  
-      let visibleNeighborhoods = [];
-      for (let i = 0; i < neighborhood_markers.length; i++) {
-        let currentLat = neighborhood_markers[i].location[0];
-        let currentLong = neighborhood_markers[i].location[1];
-
-        if (currentLat <= maxLat && currentLat >= minLat && currentLong <= maxLong && currentLong >= minLong) {
-          visibleNeighborhoods.push(i+1);
-        }
-      }
-/*
-      if (visibleNeighborhoods.length == 0) {
-        for (let i = 0; i < neighborhood_markers.length; i++) {
-          let currentLat = neighborhood_markers[i].location[0];
-          let currentLong = neighborhood_markers[i].location[1];
-  
-          let countTrue = 0;
-          if (currentLat <= maxLat) {
-            countTrue++;
-          }
-  
-          if (currentLat >= minLat) {
-            countTrue++;
-          }
-  
-          if (currentLong <= maxLong) {
-            countTrue++;
-          }
-  
-          if (currentLong >= minLong) {
-            countTrue++;
-          }
-  
-          if (countTrue >= 3) {
-            visibleNeighborhoods.push(i+1);
-          }
-        }
-      }*/
-
-      console.log(visibleNeighborhoods);
-      getJSON(`${crime_url}/neighborhoods?id=${visibleNeighborhoods.join(',')}`).then((neighborhoodData) => {
-        let neighborhoodNames = [];
-        for (let i = 0; i < neighborhoodData.length; i++) {
-          neighborhoodNames[neighborhoodData[i].neighborhood_number] = neighborhoodData[i].neighborhood_name;
-        }
-
-        if (app.location_search !== "") {
-          let request = {
-            url: `${crime_url}/incidents?neighborhood=${visibleNeighborhoods.join(',')}`,
-            dataType: "json",
-            success: function(data) {
-              for (let i = 0; i < data.length; i++) {
-                data[i]['neighborhood_name'] = neighborhoodNames[data[i].neighborhood_number];
-              }
-              LocationData(data);
-            },
-            error: function(error) {
-              console.log(error);
-            }
-          };
-          $.ajax(request);
-        } else {
-          app.location_search = "";
-        }
-      });
-    }
-  });
-
   let district_boundary = new L.geoJson();
   district_boundary.addTo(map);
 
@@ -183,6 +76,81 @@ function init() {
     .catch((error) => {
       console.log("Error:", error);
     });
+
+  map.on("moveend", () => {
+    district_boundary.eachLayer((layer) => {
+      neighborhood_bounds[parseInt(layer.feature.properties.district)] =
+        layer._bounds;
+    });
+
+    console.log(neighborhood_bounds);
+    if (app.location_search !== "") {
+      let url = `https://nominatim.openstreetmap.org/reverse?lat=${map.getCenter().lat}&lon=${map.getCenter().lng}&format=jsonv2&limit=25&accept-language=en`;
+      getJSON(url)
+        .then((data) => {
+          console.log(data);
+          if (data.name) {
+            app.location_search = data.name;
+          } else {
+            app.location_search = data.display_name;
+          }
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+
+      console.log(map.getCenter());
+      console.log(map.getBounds());
+
+      let currentCenterLat = map.getCenter().lat;
+      let currentCenterLong = map.getCenter().lng;
+
+      let visibleNeighborhoods = [];
+      for (let i = 1; i < neighborhood_bounds.length; i++) {
+        let currentMaxLat = neighborhood_bounds[i]._northEast.lat;
+        let currentMinLat = neighborhood_bounds[i]._southWest.lat;
+        let currentMaxLong = neighborhood_bounds[i]._northEast.lng;
+        let currentMinLong = neighborhood_bounds[i]._southWest.lng;
+
+        if (
+          currentCenterLat <= currentMaxLat &&
+          currentCenterLat >= currentMinLat &&
+          currentCenterLong <= currentMaxLong &&
+          currentCenterLong >= currentMinLong
+        ) {
+          visibleNeighborhoods.push(i);
+        }
+      }
+
+      console.log(visibleNeighborhoods);
+      getJSON(`${crime_url}/neighborhoods?id=${visibleNeighborhoods.join(",")}`).then((neighborhoodData) => {
+        let neighborhoodNames = [];
+        for (let i = 0; i < neighborhoodData.length; i++) {
+          neighborhoodNames[neighborhoodData[i].neighborhood_number] = neighborhoodData[i].neighborhood_name;
+        }
+
+        if (app.location_search !== "") {
+          let request = {
+            url: `${crime_url}/incidents?neighborhood=${visibleNeighborhoods.join(",")}`,
+            dataType: "json",
+            success: function (data) {
+              for (let i = 0; i < data.length; i++) {
+                data[i]["neighborhood_name"] =
+                  neighborhoodNames[data[i].neighborhood_number];
+              }
+              LocationData(data);
+            },
+            error: function (error) {
+              console.log(error);
+            },
+          };
+          $.ajax(request);
+        } else {
+          app.location_search = "";
+        }
+      });
+    }
+  });
 }
 
 function getJSON(url) {
@@ -244,4 +212,3 @@ function geoLocate() {
       console.log(error);
     });
 }
-
