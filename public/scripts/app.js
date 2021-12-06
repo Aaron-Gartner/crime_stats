@@ -44,6 +44,8 @@ function init() {
       },
       incidents: [],
       location_search: "",
+      neighborhoods: [],
+      codes: [],
     },
   });
 
@@ -77,12 +79,31 @@ function init() {
       console.log("Error:", error);
     });
 
+  getJSON(crime_url + "/neighborhoods")
+    .then((data) => {
+      for (let i = 0; i < data.length; i++) {
+        app.neighborhoods[data[i].neighborhood_number] = data[i].neighborhood_name;
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+
+  getJSON(crime_url + "/codes")
+    .then((data) => {
+      for (let i = 0; i < data.length; i++) {
+        app.codes[data[i].code] = data[i].incident_type;
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+
   map.on("moveend", () => {
     district_boundary.eachLayer((layer) => {
       neighborhood_bounds[parseInt(layer.feature.properties.district)] =
         layer._bounds;
     });
-
     console.log(neighborhood_bounds);
     if (app.location_search !== "") {
       let url = `https://nominatim.openstreetmap.org/reverse?lat=${map.getCenter().lat}&lon=${map.getCenter().lng}&format=jsonv2&limit=25&accept-language=en`;
@@ -102,53 +123,39 @@ function init() {
       console.log(map.getCenter());
       console.log(map.getBounds());
 
-      let currentCenterLat = map.getCenter().lat;
-      let currentCenterLong = map.getCenter().lng;
+      let currentSWBoundLat = map.getBounds().getSouthWest().lat;
+      let currentSWBoundLng = map.getBounds().getSouthWest().lng;
+      let currentNEBoundLat = map.getBounds().getNorthEast().lat;
+      let currentNEBoundLng = map.getBounds().getNorthEast().lng;
 
       let visibleNeighborhoods = [];
       for (let i = 1; i < neighborhood_bounds.length; i++) {
-        let currentMaxLat = neighborhood_bounds[i]._northEast.lat;
-        let currentMinLat = neighborhood_bounds[i]._southWest.lat;
-        let currentMaxLong = neighborhood_bounds[i]._northEast.lng;
-        let currentMinLong = neighborhood_bounds[i]._southWest.lng;
+        let currentHoodNELat = neighborhood_bounds[i]._northEast.lat;
+        let currentHoodSWLat = neighborhood_bounds[i]._southWest.lat;
+        let currentHoodNELng = neighborhood_bounds[i]._northEast.lng;
+        let currentHoodSWLng = neighborhood_bounds[i]._southWest.lng;
 
+        //south edge is south of nothern. north edge is north of south same w west and south
+        // part of neighborhood is north of the southernmost lat OR south of the northernmost lat
+        // AND east of the westernmost lng or west of the easternmost lng
         if (
-          currentCenterLat <= currentMaxLat &&
-          currentCenterLat >= currentMinLat &&
-          currentCenterLong <= currentMaxLong &&
-          currentCenterLong >= currentMinLong
+          (currentHoodNELat >= currentSWBoundLat && currentHoodSWLat <= currentNEBoundLat) &&
+          (currentHoodNELng >= currentSWBoundLng && currentHoodSWLng <= currentNEBoundLng )
         ) {
           visibleNeighborhoods.push(i);
         }
       }
 
       console.log(visibleNeighborhoods);
-      getJSON(`${crime_url}/neighborhoods?id=${visibleNeighborhoods.join(",")}`).then((neighborhoodData) => {
-        let neighborhoodNames = [];
-        for (let i = 0; i < neighborhoodData.length; i++) {
-          neighborhoodNames[neighborhoodData[i].neighborhood_number] = neighborhoodData[i].neighborhood_name;
-        }
-
-        if (app.location_search !== "") {
-          let request = {
-            url: `${crime_url}/incidents?neighborhood=${visibleNeighborhoods.join(",")}`,
-            dataType: "json",
-            success: function (data) {
-              for (let i = 0; i < data.length; i++) {
-                data[i]["neighborhood_name"] =
-                  neighborhoodNames[data[i].neighborhood_number];
-              }
-              LocationData(data);
-            },
-            error: function (error) {
-              console.log(error);
-            },
-          };
-          $.ajax(request);
-        } else {
-          app.location_search = "";
-        }
-      });
+      let request = {
+        url: `${crime_url}/incidents?neighborhood=${visibleNeighborhoods.join(",")}`,
+        dataType: "json",
+        success: LocationData,
+        error: function (error) {
+          console.log(error);
+        },
+      };
+      $.ajax(request);
     }
   });
 }
@@ -169,8 +176,14 @@ function getJSON(url) {
 }
 
 function LocationData(data) {
-  console.log(data);
+  for (let i = 0; i < data.length; i++) {
+    data[i]["neighborhood_name"] =
+      app.neighborhoods[data[i].neighborhood_number];
+    data[i]["incident_type"] = 
+      app.codes[data[i].code];
+  }
   app.incidents = data;
+  console.log(data);
 
   // adding markers to neighborhood_markers array
   for (let i = 0; i < neighborhood_markers.length; i++) {
