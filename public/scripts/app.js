@@ -45,7 +45,9 @@ function init() {
       incidents: [],
       location_search: "",
       neighborhoods: [],
+      neighborhood_names: ['Conway/Battlecreek/Highwood', 'Greater East Side', 'West Side', "Dayton's Bluff", 'Payne/Phalen', 'North End', 'Thomas/Dale(Frogtown)', 'Summit/University', 'West Seventh', 'Como', 'Hamline/Midway', 'St. Anthony', 'Union Park', 'Macalester-Groveland', 'Highland', 'Summit Hill', 'Capitol River'],
       codes: [],
+      incident_types: ['Theft', 'Auto Theft', 'Narcotics', 'Graffiti', 'Discharge','Vandalism','Burglary','Simple Assault Dom.','Agg. Assault','Robbery','Agg. Assault Dom.','Arson','Rape','Homicide','Proactive Police Visit','Community Engagement Event','Other']
     },
   });
 
@@ -124,23 +126,25 @@ function init() {
       console.log(map.getBounds());
 
       let currentSWBoundLat = map.getBounds().getSouthWest().lat;
-      let currentSWBoundLng = map.getBounds().getSouthWest().lng;
+      let currentSWBoundLng = Math.abs(map.getBounds().getSouthWest().lng);
       let currentNEBoundLat = map.getBounds().getNorthEast().lat;
-      let currentNEBoundLng = map.getBounds().getNorthEast().lng;
+      let currentNEBoundLng = Math.abs(map.getBounds().getNorthEast().lng);
+      console.log('BOUND: \nEASTERN LNG:' + currentNEBoundLng + '\nNORTHERN LAT: ' + currentNEBoundLat + '\nWESTERN LNG: ' + currentSWBoundLng + '\nSOUTHERN LAT: ' + currentSWBoundLat);
 
       let visibleNeighborhoods = [];
       for (let i = 1; i < neighborhood_bounds.length; i++) {
         let currentHoodNELat = neighborhood_bounds[i]._northEast.lat;
         let currentHoodSWLat = neighborhood_bounds[i]._southWest.lat;
-        let currentHoodNELng = neighborhood_bounds[i]._northEast.lng;
-        let currentHoodSWLng = neighborhood_bounds[i]._southWest.lng;
+        let currentHoodNELng = Math.abs(neighborhood_bounds[i]._northEast.lng);
+        let currentHoodSWLng = Math.abs(neighborhood_bounds[i]._southWest.lng);
+        console.log(i + '\nEASTERN LNG:' + currentHoodNELng + '\nNORTHERN LAT: ' + currentHoodNELat + '\nWESTERN LNG: ' + currentHoodSWLng + '\nSOUTHERN LAT: ' + currentHoodSWLat);
 
         //south edge is south of nothern. north edge is north of south same w west and south
         // part of neighborhood is north of the southernmost lat OR south of the northernmost lat
         // AND east of the westernmost lng or west of the easternmost lng
         if (
           (currentHoodNELat >= currentSWBoundLat && currentHoodSWLat <= currentNEBoundLat) &&
-          (currentHoodNELng >= currentSWBoundLng && currentHoodSWLng <= currentNEBoundLng )
+          (currentHoodNELng <= currentSWBoundLng && currentHoodSWLng >= currentNEBoundLng )
         ) {
           visibleNeighborhoods.push(i);
         }
