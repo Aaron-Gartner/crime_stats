@@ -24,7 +24,12 @@ let neighborhood_markers = [
   { location: [44.949203, -93.093739], marker: null },
 ];
 
-//const violentCrimes = [110,120,210,220,]
+// Violent: 110/120 Murder, 210/220 Rape, 400-453 Agg Assault, 810-863 dom assault, 900-982 arson
+// Property: 300-374 Robbery, 500-566 Burglary, 600-693 (except 614) Theft, 700-722 Vehicle theft, 1400 Vandalism, 1401-1436 Graffiti
+// Other: 614 other, 1800-1885 narcotics, 2619 Weapons, 9954 proactive visit, 9959 comm eng event
+const violentCrimes = [110, 120, 210, 220, 400, 410, 411, 412, 420, 421, 422, 430, 431, 432, 440, 441, 442, 450, 451, 452, 453, 810, 861, 862, 863, 900, 901, 903, 905, 911, 913, 915, 921, 923, 931, 941, 942, 951, 961, 971, 972, 981, 982];
+const propertyCrimes = [300, 311, 312, 313, 314, 321, 322, 323, 324, 331, 33, 334, 341, 342, 343, 344, 351, 352, 353, 354, 361, 363, 364, 371, 372, 373, 374, 500, 510, 511, 513, 515, 516, 520, 521, 523, 525, 526, 530, 531, 533, 535, 536, 540, 541, 543, 545, 546, 550, 551, 553, 555, 556, 560, 561, 563, 565, 566, 600, 603, 611, 612, 613, 621, 622, 623, 630, 631632, 633, 640, 641, 642, 643, 651, 652, 653, 661, 662, 663, 671, 672, 673, 681, 682, 683, 691, 693, 700, 710, 711, 712, 720, 721, 722, 1400, 1401, 1410, 1415, 1420, 1425, 1426, 1430, 1435, 1436];
+const otherCrimes = [614, 1800, 1810, 1811, 1812, 1813, 1814, 1815, 1820, 1822, 1823, 1824, 1825, 1830, 1835, 1840, 1841, 1842, 1843, 1844, 1845, 1850, 1855, 1860, 1865, 1870, 1880, 1885, 2619, 9954, 9959];
 
 function init() {
   app = new Vue({
@@ -47,7 +52,15 @@ function init() {
       neighborhoods: [],
       neighborhood_names: ['Conway/Battlecreek/Highwood', 'Greater East Side', 'West Side', "Dayton's Bluff", 'Payne/Phalen', 'North End', 'Thomas/Dale(Frogtown)', 'Summit/University', 'West Seventh', 'Como', 'Hamline/Midway', 'St. Anthony', 'Union Park', 'Macalester-Groveland', 'Highland', 'Summit Hill', 'Capitol River'],
       codes: [],
-      incident_types: ['Theft', 'Auto Theft', 'Narcotics', 'Graffiti', 'Discharge','Vandalism','Burglary','Simple Assault Dom.','Agg. Assault','Robbery','Agg. Assault Dom.','Arson','Rape','Homicide','Proactive Police Visit','Community Engagement Event','Other']
+      incident_types: ['Murder', 'Rape', 'Robbery', 'Aggravated Assault', 'Burglary', 'Theft', 'Other', 'Motor Vehicle Theft', 'Domestic Assault', 'Arson', 'Vandalism', 'Graffiti', 'Narcotics', 'Weapons', 'Proactive Police Visit', 'Community Engagement Event'],
+      toggle: false,
+      max_incidents: 1000,
+      selected_types: [],
+      selected_neighborhoods: [],
+      start_date: '',
+      end_date: '',
+      start_time: 0,
+      end_time: 86400
     },
   });
 
@@ -81,6 +94,7 @@ function init() {
       console.log("Error:", error);
     });
 
+  // Fills array of neighborhood names for Vue app
   getJSON(crime_url + "/neighborhoods")
     .then((data) => {
       for (let i = 0; i < data.length; i++) {
@@ -91,6 +105,7 @@ function init() {
       console.log(error);
     });
 
+  // Fills array of incident types by code for Vue app  
   getJSON(crime_url + "/codes")
     .then((data) => {
       for (let i = 0; i < data.length; i++) {
@@ -101,12 +116,15 @@ function init() {
       console.log(error);
     });
 
+  // Callback that is done when map is done moving  
   map.on("moveend", () => {
     district_boundary.eachLayer((layer) => {
       neighborhood_bounds[parseInt(layer.feature.properties.district)] =
         layer._bounds;
     });
     console.log(neighborhood_bounds);
+
+    // Put the name of the place inside the search bar
     if (app.location_search !== "") {
       let url = `https://nominatim.openstreetmap.org/reverse?lat=${map.getCenter().lat}&lon=${map.getCenter().lng}&format=jsonv2&limit=25&accept-language=en`;
       getJSON(url)
@@ -122,6 +140,7 @@ function init() {
           console.log(error);
         });
 
+      // Determine which neighborhoods are currently visible on the map  
       console.log(map.getCenter());
       console.log(map.getBounds());
 
@@ -144,13 +163,15 @@ function init() {
         // AND east of the westernmost lng or west of the easternmost lng
         if (
           (currentHoodNELat >= currentSWBoundLat && currentHoodSWLat <= currentNEBoundLat) &&
-          (currentHoodNELng <= currentSWBoundLng && currentHoodSWLng >= currentNEBoundLng )
+          (currentHoodNELng <= currentSWBoundLng && currentHoodSWLng >= currentNEBoundLng)
         ) {
           visibleNeighborhoods.push(i);
         }
       }
 
       console.log(visibleNeighborhoods);
+
+      // Call incidents API to get the top 1k incidents w/ neighborhoods visible on map
       let request = {
         url: `${crime_url}/incidents?neighborhood=${visibleNeighborhoods.join(",")}`,
         dataType: "json",
@@ -164,6 +185,7 @@ function init() {
   });
 }
 
+// promise for getting JSON data
 function getJSON(url) {
   return new Promise((resolve, reject) => {
     $.ajax({
@@ -179,11 +201,12 @@ function getJSON(url) {
   });
 }
 
+// fill the table
 function LocationData(data) {
   for (let i = 0; i < data.length; i++) {
     data[i]["neighborhood_name"] =
       app.neighborhoods[data[i].neighborhood_number];
-    data[i]["incident_type"] = 
+    data[i]["incident_type"] =
       app.codes[data[i].code];
   }
   app.incidents = data;
@@ -195,16 +218,17 @@ function LocationData(data) {
     neighborhood_markers[i].marker = marker;
   }
 
+  // Count up the incidents present in each neighborhood
   var neighborhoodIncidents = [];
   for (let i = 0; i < neighborhood_markers.length + 1; i++) {
     neighborhoodIncidents.push(0);
   }
-
   for (let i = 0; i < data.length; i++) {
     let currentNeighborhood = parseInt(data[i].neighborhood_number);
     neighborhoodIncidents[currentNeighborhood]++;
   }
 
+  // bind the counts to the popup
   for (let i = 0; i < neighborhood_markers.length; i++) {
     var popup = L.popup().setLatLng(neighborhood_markers[i].location);
     popup.setContent("Incidents: " + neighborhoodIncidents[i + 1]);
@@ -212,6 +236,7 @@ function LocationData(data) {
   }
 }
 
+// move map to where the input is after clicking the Go! button
 function geoLocate() {
   let location = app.location_search + " , St. Paul, Minnesota";
   let url = `https://nominatim.openstreetmap.org/search?q=${location}&format=json&limit=25&accept-language=en`;
