@@ -6,3 +6,23 @@
     min-width: 800px;  /* feel free to change this! */
     min-height: 600px; /* feel free to change this! */
 }
+
+.violentClass {
+    background-color: rgba(100,0,0,0.5) !important;
+}
+
+.propertyClass {
+    background-color: rgba(0,100,0,0.5) !important;
+}
+
+.otherClass {
+    background-color: rgba(0,0,100,0.5) !important;
+}
+
+.specialIcon {
+    background-color: pink !important;
+}
+
+.legend {
+    margin-left: 5rem;
+}

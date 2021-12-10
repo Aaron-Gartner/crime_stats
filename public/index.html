@@ -49,16 +49,16 @@
             <div style="float: left; width: 50%">
                 <h2>Incident Types</h2>
                 <div v-for="type in incident_types">
-                    <input id="optionType" type="checkbox" v-model="selected_types"/>
-                    <span for="optionType">{{type}}</span>
+                    <input :id="type" type="checkbox" :value="type" v-model="selected_types" />
+                    <label :for="type">{{type}}</label>
                 </div>
             </div>
 
             <div style="float: right; width: 50%">
                 <h2>Neighborhoods</h2>
                 <div v-for="hood in neighborhood_names">
-                    <input id="optionHood" type="checkbox" v-model="selected_neighborhoods"/>
-                    <span for="optionHood">{{hood}}</span>
+                    <input :id="hood" type="checkbox" :value="hood" v-model="selected_neighborhoods"/>
+                    <label :for="hood">{{hood}}</label>
                 </div>
             </div>
             <div style="clear: both"></div>
@@ -66,10 +66,10 @@
 
             <div style="float: left; width: 33%">
                 <label for="startDate">Start Date</label>
-                <input type="date" id="startDate" v-model="start_date"/>
+                <input type="date" id="startDate" min="2014-08-14" max="2020-11-26":value="start_date" v-model="start_date"/>
     
                 <label for="endDate">End Date</label>
-                <input type="date" id="endDate" v-model="end_date"/>
+                <input type="date" id="endDate" min="2014-08-14" max="2020-11-26" :value="end_date" v-model="end_date"/>
             </div>
 
             <div style="float: left; width: 33%; padding-left: 4rem;">
@@ -78,24 +78,26 @@
                 <span>{{max_incidents}}</span>
             </div>
     
+            <!--Going from seconds to HH MM referenced from https://stackoverflow.com/questions/1322732/convert-seconds-to-hh-mm-ss-with-javascript-->
             <div style="float: left; width: 33%;">
                 <label for="startTime">Start Time</label>
-                <input type="range" id="startTime" min="0" max="86400" step="60" value="0" v-model="start_time"/>
-                <span>{{start_time}}</span>
+                <input type="range" id="startTime" min="0" max="86399" step="60" :value="start_time" v-model="start_time"/>
+                <span>{{new Date(start_time*1000).toISOString().substring(11,16)}}</span>
     
                 <label for="endTime">End Time</label>
-                <input type="range" id="endTime" min="0" max="86400" step="60" value="86400" v-model="end_time" />
-                <span>{{end_time}}</span>
+                <input type="range" id="endTime" min="0" max="86399" step="60" :value="end_time" v-model="end_time" />
+                <span>{{new Date((end_time)*1000).toISOString().substring(11,16)}}</span>
             </div>
             <div style="clear: both"></div>
 
-            <button class="button" style="float: right;" @click="geoLocate">Submit</button>
+            <button class="button" style="float: right;" @click="handleFilters">Submit</button>
         </div>
         <hr /> <br />
 
         <div id="leafletmap"></div>
         <hr /> <br />
         <table id="table" v-if="incidents.length > 0" class="table-responsive">
+            <caption class="legend"><b>LEGEND</b><i class="violentClass legend">Violent Crimes</i><i class="propertyClass legend">Property Crimes</i><i class="otherClass legend">Other Crimes</i></caption>
             <tr>
                 <th>Case Number</th>
                 <th>Incident Type</th>
@@ -105,14 +107,14 @@
                 <th>Time</th>
                 <th></th>
             </tr>
-            <tr v-for="incident in incidents" style="text-align: center;">
+            <tr v-for="incident in incidents" v-if="incident != undefined" style="text-align: center;" v-bind:class="findType(incident.code)">
                 <td>{{ incident.case_number }}</td>
                 <td>{{ incident.incident_type }}</td>
                 <td>{{ incident.neighborhood_name }}</td>
                 <td>{{ incident.block }}</td>
                 <td>{{ incident.date }}</td>
                 <td>{{ incident.time.split('.')[0] }}</td>
-                <td><button class="ui-button">Add Marker</button></td>
+                <td><button class="ui-button" @click="addMarker(incident)">Add Marker</button></td>
             </tr>
         </table>
     </div>

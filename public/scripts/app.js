@@ -28,9 +28,26 @@ let neighborhood_markers = [
 // Property: 300-374 Robbery, 500-566 Burglary, 600-693 (except 614) Theft, 700-722 Vehicle theft, 1400 Vandalism, 1401-1436 Graffiti
 // Other: 614 other, 1800-1885 narcotics, 2619 Weapons, 9954 proactive visit, 9959 comm eng event
 const violentCrimes = [110, 120, 210, 220, 400, 410, 411, 412, 420, 421, 422, 430, 431, 432, 440, 441, 442, 450, 451, 452, 453, 810, 861, 862, 863, 900, 901, 903, 905, 911, 913, 915, 921, 923, 931, 941, 942, 951, 961, 971, 972, 981, 982];
-const propertyCrimes = [300, 311, 312, 313, 314, 321, 322, 323, 324, 331, 33, 334, 341, 342, 343, 344, 351, 352, 353, 354, 361, 363, 364, 371, 372, 373, 374, 500, 510, 511, 513, 515, 516, 520, 521, 523, 525, 526, 530, 531, 533, 535, 536, 540, 541, 543, 545, 546, 550, 551, 553, 555, 556, 560, 561, 563, 565, 566, 600, 603, 611, 612, 613, 621, 622, 623, 630, 631632, 633, 640, 641, 642, 643, 651, 652, 653, 661, 662, 663, 671, 672, 673, 681, 682, 683, 691, 693, 700, 710, 711, 712, 720, 721, 722, 1400, 1401, 1410, 1415, 1420, 1425, 1426, 1430, 1435, 1436];
+const propertyCrimes = [300, 311, 312, 313, 314, 321, 322, 323, 324, 331, 33, 334, 341, 342, 343, 344, 351, 352, 353, 354, 361, 363, 364, 371, 372, 373, 374, 500, 510, 511, 513, 515, 516, 520, 521, 523, 525, 526, 530, 531, 533, 535, 536, 540, 541, 543, 545, 546, 550, 551, 553, 555, 556, 560, 561, 563, 565, 566, 600, 603, 611, 612, 613, 621, 622, 623, 630, 631, 632, 633, 640, 641, 642, 643, 651, 652, 653, 661, 662, 663, 671, 672, 673, 681, 682, 683, 691, 693, 700, 710, 711, 712, 720, 721, 722, 1400, 1401, 1410, 1415, 1420, 1425, 1426, 1430, 1435, 1436];
 const otherCrimes = [614, 1800, 1810, 1811, 1812, 1813, 1814, 1815, 1820, 1822, 1823, 1824, 1825, 1830, 1835, 1840, 1841, 1842, 1843, 1844, 1845, 1850, 1855, 1860, 1865, 1870, 1880, 1885, 2619, 9954, 9959];
-
+const codeToCrimeTypeMapping = {
+  'Murder': [110, 120],
+  'Rape': [210,220],
+  'Robbery': [300, 311, 312, 313, 314, 321, 322, 323, 324, 331, 33, 334, 341, 342, 343, 344, 351, 352, 353, 354, 361, 363, 364, 371, 372, 373, 374],
+  'Aggravated Assault': [400, 410, 411, 412, 420, 421, 422, 430, 431, 432, 440, 441, 442, 450, 451, 452, 453],
+  'Burglary': [500, 510, 511, 513, 515, 516, 520, 521, 523, 525, 526, 530, 531, 533, 535, 536, 540, 541, 543, 545, 546, 550, 551, 553, 555, 556, 560, 561, 563, 565, 566],
+  'Theft': [600, 603, 611, 612, 613, 621, 622, 623, 630, 631, 632, 633, 640, 641, 642, 643, 651, 652, 653, 661, 662, 663, 671, 672, 673, 681, 682, 683, 691, 693],
+  'Other': [614],
+  'Motor Vehicle Theft': [700, 710, 711, 712, 720, 721, 722],
+  'Domestic Assault': [810, 861, 862, 863],
+  'Arson': [900, 901, 903, 905, 911, 913, 915, 921, 923, 931, 941, 942, 951, 961, 971, 972, 981, 982],
+  'Vandalism': [1400, 1410, 1420, 1430],
+  'Graffiti': [1401, 1415, 1416, 1425, 1426, 1435, 1436],
+  'Narcotics': [1800, 1810, 1811, 1812, 1813, 1814, 1815, 1820, 1822, 1823, 1824, 1825, 1830, 1835, 1840, 1841, 1842, 1843, 1844, 1845, 1850, 1855, 1860, 1865, 1870, 1880, 1885],
+  'Weapons': [2619],
+  'Proactive Police Visit': [9954],
+  'Community Engagement Event': [9959]
+}
 function init() {
   app = new Vue({
     el: "#app",
@@ -60,8 +77,20 @@ function init() {
       start_date: '',
       end_date: '',
       start_time: 0,
-      end_time: 86400
+      end_time: 86399
     },
+    // Referenced from vue documentation https://vuejs.org/v2/guide/class-and-style.html and https://levelup.gitconnected.com/solving-common-vue-problems-classes-binding-and-more-4d4292daa66d
+    methods: {
+      findType: function(code) {
+        if (violentCrimes.indexOf(code) > -1) {
+          return 'violentClass'
+        } else if (propertyCrimes.indexOf(code) > -1) {
+          return 'propertyClass'
+        } else {
+          return 'otherClass'
+        }
+      }
+    }
   });
 
   map = L.map("leafletmap").setView(
@@ -204,10 +233,12 @@ function getJSON(url) {
 // fill the table
 function LocationData(data) {
   for (let i = 0; i < data.length; i++) {
-    data[i]["neighborhood_name"] =
+    if (data[i] != undefined) {
+      data[i]["neighborhood_name"] =
       app.neighborhoods[data[i].neighborhood_number];
     data[i]["incident_type"] =
       app.codes[data[i].code];
+    }
   }
   app.incidents = data;
   console.log(data);
@@ -224,8 +255,10 @@ function LocationData(data) {
     neighborhoodIncidents.push(0);
   }
   for (let i = 0; i < data.length; i++) {
-    let currentNeighborhood = parseInt(data[i].neighborhood_number);
-    neighborhoodIncidents[currentNeighborhood]++;
+    if (data[i] != undefined) {
+      let currentNeighborhood = parseInt(data[i].neighborhood_number);
+      neighborhoodIncidents[currentNeighborhood]++;
+    }
   }
 
   // bind the counts to the popup
@@ -234,6 +267,7 @@ function LocationData(data) {
     popup.setContent("Incidents: " + neighborhoodIncidents[i + 1]);
     neighborhood_markers[i].marker.bindPopup(popup);
   }
+  console.log('dome');
 }
 
 // move map to where the input is after clicking the Go! button
@@ -253,4 +287,125 @@ function geoLocate() {
     .catch((error) => {
       console.log(error);
     });
+}
+
+function handleFilters() {
+  // Going from seconds to HH MM referenced from https://stackoverflow.com/questions/1322732/convert-seconds-to-hh-mm-ss-with-javascript and https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString
+  let max = parseInt(app.max_incidents);
+  let types = app.selected_types;
+  let neighborhoods = app.selected_neighborhoods;
+  let start_time = app.start_time;
+  let end_time = app.end_time;
+
+  let codes = [];
+  for(let i = 0; i < types.length; i++) {
+    let currentTypeCodes = codeToCrimeTypeMapping[types[i]];
+    codes.push(currentTypeCodes.join(','))
+  }
+  codes = codes.join(',');
+  console.log(codes);
+
+  let neighborhoodNumbers = [];
+  for (let i = 0; i < neighborhoods.length; i++) {
+    let idx = app.neighborhood_names.indexOf(neighborhoods[i]);
+    if (idx > -1) {
+      neighborhoodNumbers.push(idx + 1);
+    }
+  }
+  neighborhoodNumbers = neighborhoodNumbers.join(',');
+  console.log(neighborhoodNumbers);
+
+  console.log('Max incidents: ' + max);
+  console.log('Types: ' + types);
+  console.log('Neighborhoods: ' + neighborhoods);
+  console.log('Start Date: ' + app.start_date);
+  console.log('End Date: ' + app.end_date);
+  console.log('Start time: ' + start_time);
+  console.log('End time: ' + end_time);
+
+  // URL will always have the default max 1k
+  let url = crime_url + '/incidents?';
+  url += `limit=${max}`;
+
+  if (codes) {
+    url += `&code=${codes}`;
+  }
+
+  if (neighborhoodNumbers) {
+    url += `&neighborhood=${neighborhoodNumbers}`;
+  }
+
+  if (app.start_date) {
+    url += `&start_date=${app.start_date}`;
+  }
+
+  if (app.end_date) {
+    url += `&end_date=${app.end_date}`;
+  }
+
+  console.log(url);
+
+
+  let request = {
+    url: url,
+    dataType: "json",
+    success: function(data) {
+      if (start_time || end_time) {
+        for (let i = 0; i < data.length; i++) {
+          let currentTime = data[i].time.split('.')[0];
+          let hours = parseInt(currentTime.split(":")[0]);
+          let minutes = parseInt(currentTime.split(":")[1]);
+          let seconds = parseInt(currentTime.split(":")[2]);
+          let currentTimeAsSeconds = (hours * 3600) + (minutes * 60) + seconds;
+          if (currentTimeAsSeconds < start_time || currentTimeAsSeconds > end_time) {
+            data[i] = undefined;
+          }
+        }
+      }
+      console.log(data);
+      LocationData(data);
+    },
+    error: function (error) {
+      console.log(error);
+    },
+  };
+  $.ajax(request);
+}
+
+// Removing marker was referenced from https://stackoverflow.com/questions/9912145/leaflet-how-to-find-existing-markers-and-delete-markers
+var specialMarker;
+function addMarker(incident) {
+  let streetNumber = incident.block.split(' ')[0];
+  let otherParts = incident.block.split(' ');
+  if (/\d/.test(streetNumber)) {
+    streetNumber = streetNumber.replaceAll('X', '0');
+  }
+
+  let address = streetNumber + ' ';
+  for (let i = 1; i < otherParts.length; i++) {
+    address += otherParts[i].trim() + ' ';
+  }
+
+  let location = address + " , St. Paul, Minnesota";
+  let url = `https://nominatim.openstreetmap.org/search?q=${location}&format=json&limit=25&accept-language=en`;
+
+  getJSON(url)
+    .then((data) => {
+      if (data) {
+        let lat = data[0].lat;
+        let lng = data[0].lon;
+        // TODO: use special marker
+        specialMarker = L.marker([lat, lng]).addTo(map);
+        var popup = L.popup().setLatLng([lat, lng]);
+        popup.setContent(`<p>Case number: ${incident.case_number}</p><p>Date: ${incident.date}</p><p>Time: ${incident.time.split('.')[0]}</p><p>${incident.incident}</p><button class="ui-button" onclick="map.removeLayer(specialMarker)">Delete</button>`);
+        specialMarker.bindPopup(popup);
+      } else {
+        console.log("error");
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+
+
 }
