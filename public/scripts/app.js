@@ -159,7 +159,7 @@ function init() {
       let url = `https://nominatim.openstreetmap.org/reverse?lat=${map.getCenter().lat}&lon=${map.getCenter().lng}&format=jsonv2&limit=25&accept-language=en`;
       getJSON(url)
         .then((data) => {
-          console.log(data);
+          //console.log(data);
           if (data.name) {
             app.location_search = data.name;
           } else {
@@ -272,6 +272,7 @@ function geoLocate() {
   if (/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/.test(app.location_search)) {
     location = app.location_search;
   } else {
+    // locations can only be in St. Paul 
     location = app.location_search + " , St. Paul, Minnesota";
   }
 
@@ -279,8 +280,27 @@ function geoLocate() {
 
   getJSON(url)
     .then((data) => {
-      if (data) {
-        let latLng = [data[0].lat, data[0].lon];
+      if (data.length > 0) {
+        let boundNE = map.options.maxBounds._northEast;
+        let boundSW = map.options.maxBounds._southWest;
+        let latLng;
+
+        // if it is too far east, clamp to east bound
+        if (data[0].lon > boundNE.lng) {
+          data[0].lon = boundNE.lng;  
+        // if it is too far west, clamp to west bound  
+        } else if (data[0].lon < boundSW.lng) {
+          data[0].lon = boundSW.lng;
+        }
+        
+        // same thing north and south
+        if (data[0].lat > boundNE.lat) {
+          data[0].lat = boundNE.lat;
+        } else if (data[0].lat < boundSW.lat) {
+          data[0].lat = boundSW.lat;
+        }
+
+        latLng = [data[0].lat, data[0].lon];
         map = map.flyTo(latLng, 15.5);
       } else {
         console.log("error");
@@ -355,7 +375,7 @@ function handleFilters() {
     dataType: "json",
     success: function(data) {
       if (start_time != 0 || end_time != 86399) {
-        console.log('custom time');
+        //console.log('custom time');
         for (let i = 0; i < data.length; i++) {
           let currentTime = data[i].time.split('.')[0];
           let hours = parseInt(currentTime.split(":")[0]);
@@ -378,7 +398,8 @@ function handleFilters() {
 }
 
 // Removing marker was referenced from https://stackoverflow.com/questions/9912145/leaflet-how-to-find-existing-markers-and-delete-markers
-var specialMarker;
+var specialMarkers = {};
+var specialMarkerLayerId;
 function addMarker(incident) {
   let streetNumber = incident.block.split(' ')[0];
   let otherParts = incident.block.split(' ');
@@ -397,12 +418,19 @@ function addMarker(incident) {
   getJSON(url)
     .then((data) => {
       if (data) {
-        let lat = data[0].lat;
-        let lng = data[0].lon;
-        // TODO: use special marker
-        specialMarker = L.marker([lat, lng]).addTo(map);
-        var popup = L.popup().setLatLng([lat, lng]);
-        popup.setContent(`<p>Case number: ${incident.case_number}</p><p>Date: ${incident.date}</p><p>Time: ${incident.time.split('.')[0]}</p><p>${incident.incident}</p><button class="ui-button" onclick="map.removeLayer(specialMarker)">Delete</button>`);
+        var lat = data[0].lat;
+        var lng = data[0].lon;
+
+        // Found this icon library https://github.com/pointhi/leaflet-color-markers
+        var specialIcon = new L.Icon({
+          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
+        });
+        var specialMarker = new L.marker([lat, lng], {icon: specialIcon});
+        specialMarker.addTo(map);
+        specialMarkers[specialMarker._leaflet_id] = specialMarker;
+        specialMarkerLayerId = specialMarker._leaflet_id;
+        var popup = new L.popup().setLatLng([lat, lng]);
+        popup.setContent(`<p>Case number: ${incident.case_number}</p><p>Date: ${incident.date}</p><p>Time: ${incident.time.split('.')[0]}</p><p>${incident.incident}</p><button class="ui-button" id="${specialMarkerLayerId}" onclick="removeMarker(this.id, specialMarkers)">Delete</button>`);
         specialMarker.bindPopup(popup);
       } else {
         console.log("error");
@@ -411,4 +439,9 @@ function addMarker(incident) {
     .catch((error) => {
       console.log(error);
     });
+}
+
+function removeMarker(id, markers) {
+  let markerToRemove = markers[id];
+  map.removeLayer(markerToRemove);
 }
