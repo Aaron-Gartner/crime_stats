@@ -77,7 +77,8 @@ function init() {
       start_date: '',
       end_date: '',
       start_time: 0,
-      end_time: 86399
+      end_time: 86399,
+      isIncidentsReady: false
     },
     // Referenced from vue documentation https://vuejs.org/v2/guide/class-and-style.html and https://levelup.gitconnected.com/solving-common-vue-problems-classes-binding-and-more-4d4292daa66d
     methods: {
@@ -177,7 +178,7 @@ function init() {
       let currentSWBoundLng = Math.abs(map.getBounds().getSouthWest().lng);
       let currentNEBoundLat = map.getBounds().getNorthEast().lat;
       let currentNEBoundLng = Math.abs(map.getBounds().getNorthEast().lng);
-      console.log('BOUND: \nEASTERN LNG:' + currentNEBoundLng + '\nNORTHERN LAT: ' + currentNEBoundLat + '\nWESTERN LNG: ' + currentSWBoundLng + '\nSOUTHERN LAT: ' + currentSWBoundLat);
+      console.log('BOUND: \nEASTERN LNG:\t' + currentNEBoundLng + '\nNORTHERN LAT:\t' + currentNEBoundLat + '\nWESTERN LNG:\t' + currentSWBoundLng + '\nSOUTHERN LAT:\t' + currentSWBoundLat);
 
       let visibleNeighborhoods = [];
       for (let i = 1; i < neighborhood_bounds.length; i++) {
@@ -185,7 +186,7 @@ function init() {
         let currentHoodSWLat = neighborhood_bounds[i]._southWest.lat;
         let currentHoodNELng = Math.abs(neighborhood_bounds[i]._northEast.lng);
         let currentHoodSWLng = Math.abs(neighborhood_bounds[i]._southWest.lng);
-        console.log(i + '\nEASTERN LNG:' + currentHoodNELng + '\nNORTHERN LAT: ' + currentHoodNELat + '\nWESTERN LNG: ' + currentHoodSWLng + '\nSOUTHERN LAT: ' + currentHoodSWLat);
+        console.log(i + '\nEASTERN LNG:\t' + currentHoodNELng + '\nNORTHERN LAT:\t' + currentHoodNELat + '\nWESTERN LNG:\t' + currentHoodSWLng + '\nSOUTHERN LAT:\t' + currentHoodSWLat);
 
         //south edge is south of nothern. north edge is north of south same w west and south
         // part of neighborhood is north of the southernmost lat OR south of the northernmost lat
@@ -232,17 +233,6 @@ function getJSON(url) {
 
 // fill the table
 function LocationData(data) {
-  for (let i = 0; i < data.length; i++) {
-    if (data[i] != undefined) {
-      data[i]["neighborhood_name"] =
-      app.neighborhoods[data[i].neighborhood_number];
-    data[i]["incident_type"] =
-      app.codes[data[i].code];
-    }
-  }
-  app.incidents = data;
-  console.log(data);
-
   // adding markers to neighborhood_markers array
   for (let i = 0; i < neighborhood_markers.length; i++) {
     var marker = L.marker(neighborhood_markers[i].location).addTo(map);
@@ -254,12 +244,18 @@ function LocationData(data) {
   for (let i = 0; i < neighborhood_markers.length + 1; i++) {
     neighborhoodIncidents.push(0);
   }
+
   for (let i = 0; i < data.length; i++) {
     if (data[i] != undefined) {
+      data[i]["neighborhood_name"] = app.neighborhoods[data[i].neighborhood_number];
+      data[i]["incident_type"] = app.codes[data[i].code];
       let currentNeighborhood = parseInt(data[i].neighborhood_number);
       neighborhoodIncidents[currentNeighborhood]++;
     }
   }
+  app.incidents = data;
+  app.isIncidentsReady = true;
+  console.log(data);
 
   // bind the counts to the popup
   for (let i = 0; i < neighborhood_markers.length; i++) {
@@ -267,12 +263,18 @@ function LocationData(data) {
     popup.setContent("Incidents: " + neighborhoodIncidents[i + 1]);
     neighborhood_markers[i].marker.bindPopup(popup);
   }
-  console.log('dome');
 }
 
 // move map to where the input is after clicking the Go! button
 function geoLocate() {
-  let location = app.location_search + " , St. Paul, Minnesota";
+  let location;
+  // regex from https://stackoverflow.com/questions/3518504/regular-expression-for-matching-latitude-longitude-coordinates
+  if (/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/.test(app.location_search)) {
+    location = app.location_search;
+  } else {
+    location = app.location_search + " , St. Paul, Minnesota";
+  }
+
   let url = `https://nominatim.openstreetmap.org/search?q=${location}&format=json&limit=25&accept-language=en`;
 
   getJSON(url)
@@ -350,7 +352,8 @@ function handleFilters() {
     url: url,
     dataType: "json",
     success: function(data) {
-      if (start_time || end_time) {
+      if (start_time != 0 || end_time != 86399) {
+        console.log('custom time');
         for (let i = 0; i < data.length; i++) {
           let currentTime = data[i].time.split('.')[0];
           let hours = parseInt(currentTime.split(":")[0]);
@@ -362,10 +365,10 @@ function handleFilters() {
           }
         }
       }
-      console.log(data);
       LocationData(data);
     },
     error: function (error) {
+      LocationData([]);
       console.log(error);
     },
   };

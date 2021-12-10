@@ -44,7 +44,7 @@
         </div>
         <br />
 
-        <button class="button" type="button" @click='toggle = !toggle'>UI Controls</button>
+        <button class="button" type="button" @click='toggle = !toggle'>Filter</button>
         <div v-if="toggle">
             <div style="float: left; width: 50%">
                 <h2>Incident Types</h2>
@@ -117,6 +117,7 @@
                 <td><button class="ui-button" @click="addMarker(incident)">Add Marker</button></td>
             </tr>
         </table>
+        <h1 v-else-if="incidents.length == 0 && isIncidentsReady">No incidents found</h1>
     </div>
 </body>
 </html>
