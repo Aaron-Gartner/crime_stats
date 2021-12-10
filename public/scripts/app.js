@@ -152,7 +152,7 @@ function init() {
       neighborhood_bounds[parseInt(layer.feature.properties.district)] =
         layer._bounds;
     });
-    console.log(neighborhood_bounds);
+    //console.log(neighborhood_bounds);
 
     // Put the name of the place inside the search bar
     if (app.location_search !== "") {
@@ -171,14 +171,14 @@ function init() {
         });
 
       // Determine which neighborhoods are currently visible on the map  
-      console.log(map.getCenter());
-      console.log(map.getBounds());
+      //console.log(map.getCenter());
+      //console.log(map.getBounds());
 
       let currentSWBoundLat = map.getBounds().getSouthWest().lat;
       let currentSWBoundLng = Math.abs(map.getBounds().getSouthWest().lng);
       let currentNEBoundLat = map.getBounds().getNorthEast().lat;
       let currentNEBoundLng = Math.abs(map.getBounds().getNorthEast().lng);
-      console.log('BOUND: \nEASTERN LNG:\t' + currentNEBoundLng + '\nNORTHERN LAT:\t' + currentNEBoundLat + '\nWESTERN LNG:\t' + currentSWBoundLng + '\nSOUTHERN LAT:\t' + currentSWBoundLat);
+      //console.log('BOUND: \nEASTERN LNG:\t' + currentNEBoundLng + '\nNORTHERN LAT:\t' + currentNEBoundLat + '\nWESTERN LNG:\t' + currentSWBoundLng + '\nSOUTHERN LAT:\t' + currentSWBoundLat);
 
       let visibleNeighborhoods = [];
       for (let i = 1; i < neighborhood_bounds.length; i++) {
@@ -186,7 +186,7 @@ function init() {
         let currentHoodSWLat = neighborhood_bounds[i]._southWest.lat;
         let currentHoodNELng = Math.abs(neighborhood_bounds[i]._northEast.lng);
         let currentHoodSWLng = Math.abs(neighborhood_bounds[i]._southWest.lng);
-        console.log(i + '\nEASTERN LNG:\t' + currentHoodNELng + '\nNORTHERN LAT:\t' + currentHoodNELat + '\nWESTERN LNG:\t' + currentHoodSWLng + '\nSOUTHERN LAT:\t' + currentHoodSWLat);
+        //console.log(i + '\nEASTERN LNG:\t' + currentHoodNELng + '\nNORTHERN LAT:\t' + currentHoodNELat + '\nWESTERN LNG:\t' + currentHoodSWLng + '\nSOUTHERN LAT:\t' + currentHoodSWLat);
 
         //south edge is south of nothern. north edge is north of south same w west and south
         // part of neighborhood is north of the southernmost lat OR south of the northernmost lat
@@ -199,7 +199,7 @@ function init() {
         }
       }
 
-      console.log(visibleNeighborhoods);
+      //console.log(visibleNeighborhoods);
 
       // Call incidents API to get the top 1k incidents w/ neighborhoods visible on map
       let request = {
@@ -255,7 +255,7 @@ function LocationData(data) {
   }
   app.incidents = data;
   app.isIncidentsReady = true;
-  console.log(data);
+  //console.log(data);
 
   // bind the counts to the popup
   for (let i = 0; i < neighborhood_markers.length; i++) {
@@ -305,7 +305,7 @@ function handleFilters() {
     codes.push(currentTypeCodes.join(','))
   }
   codes = codes.join(',');
-  console.log(codes);
+  //console.log(codes);
 
   let neighborhoodNumbers = [];
   for (let i = 0; i < neighborhoods.length; i++) {
@@ -315,7 +315,7 @@ function handleFilters() {
     }
   }
   neighborhoodNumbers = neighborhoodNumbers.join(',');
-  console.log(neighborhoodNumbers);
+  /*console.log(neighborhoodNumbers);
 
   console.log('Max incidents: ' + max);
   console.log('Types: ' + types);
@@ -323,7 +323,7 @@ function handleFilters() {
   console.log('Start Date: ' + app.start_date);
   console.log('End Date: ' + app.end_date);
   console.log('Start time: ' + start_time);
-  console.log('End time: ' + end_time);
+  console.log('End time: ' + end_time);*/
 
   // URL will always have the default max 1k
   let url = crime_url + '/incidents?';
@@ -345,8 +345,10 @@ function handleFilters() {
     url += `&end_date=${app.end_date}`;
   }
 
-  console.log(url);
+  //console.log(url);
 
+  // Clear seach box so moving map won't change data
+  app.location_search = '';
 
   let request = {
     url: url,
@@ -409,6 +411,4 @@ function addMarker(incident) {
     .catch((error) => {
       console.log(error);
     });
-
-
 }
