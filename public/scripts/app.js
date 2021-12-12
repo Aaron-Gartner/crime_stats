@@ -159,7 +159,6 @@ function init() {
       let url = `https://nominatim.openstreetmap.org/reverse?lat=${map.getCenter().lat}&lon=${map.getCenter().lng}&format=jsonv2&limit=25&accept-language=en`;
       getJSON(url)
         .then((data) => {
-          //console.log(data);
           if (data.name) {
             app.location_search = data.name;
           } else {
@@ -169,37 +168,7 @@ function init() {
         .catch((error) => {
           console.log(error);
         });
-
-      // Determine which neighborhoods are currently visible on the map  
-      //console.log(map.getCenter());
-      //console.log(map.getBounds());
-
-      let currentSWBoundLat = map.getBounds().getSouthWest().lat;
-      let currentSWBoundLng = Math.abs(map.getBounds().getSouthWest().lng);
-      let currentNEBoundLat = map.getBounds().getNorthEast().lat;
-      let currentNEBoundLng = Math.abs(map.getBounds().getNorthEast().lng);
-      //console.log('BOUND: \nEASTERN LNG:\t' + currentNEBoundLng + '\nNORTHERN LAT:\t' + currentNEBoundLat + '\nWESTERN LNG:\t' + currentSWBoundLng + '\nSOUTHERN LAT:\t' + currentSWBoundLat);
-
-      let visibleNeighborhoods = [];
-      for (let i = 1; i < neighborhood_bounds.length; i++) {
-        let currentHoodNELat = neighborhood_bounds[i]._northEast.lat;
-        let currentHoodSWLat = neighborhood_bounds[i]._southWest.lat;
-        let currentHoodNELng = Math.abs(neighborhood_bounds[i]._northEast.lng);
-        let currentHoodSWLng = Math.abs(neighborhood_bounds[i]._southWest.lng);
-        //console.log(i + '\nEASTERN LNG:\t' + currentHoodNELng + '\nNORTHERN LAT:\t' + currentHoodNELat + '\nWESTERN LNG:\t' + currentHoodSWLng + '\nSOUTHERN LAT:\t' + currentHoodSWLat);
-
-        //south edge is south of nothern. north edge is north of south same w west and south
-        // part of neighborhood is north of the southernmost lat OR south of the northernmost lat
-        // AND east of the westernmost lng or west of the easternmost lng
-        if (
-          (currentHoodNELat >= currentSWBoundLat && currentHoodSWLat <= currentNEBoundLat) &&
-          (currentHoodNELng <= currentSWBoundLng && currentHoodSWLng >= currentNEBoundLng)
-        ) {
-          visibleNeighborhoods.push(i);
-        }
-      }
-
-      //console.log(visibleNeighborhoods);
+      let visibleNeighborhoods = getVisibleNeighborhoods();
 
       // Call incidents API to get the top 1k incidents w/ neighborhoods visible on map
       let request = {
@@ -213,6 +182,34 @@ function init() {
       $.ajax(request);
     }
   });
+}
+
+function getVisibleNeighborhoods() {
+  // Determine which neighborhoods are currently visible on the map  
+  let currentSWBoundLat = map.getBounds().getSouthWest().lat;
+  let currentSWBoundLng = Math.abs(map.getBounds().getSouthWest().lng);
+  let currentNEBoundLat = map.getBounds().getNorthEast().lat;
+  let currentNEBoundLng = Math.abs(map.getBounds().getNorthEast().lng);
+
+  
+  let visibleNeighborhoods = [];
+  for (let i = 1; i < neighborhood_bounds.length; i++) {
+    let currentHoodNELat = neighborhood_bounds[i]._northEast.lat;
+    let currentHoodSWLat = neighborhood_bounds[i]._southWest.lat;
+    let currentHoodNELng = Math.abs(neighborhood_bounds[i]._northEast.lng);
+    let currentHoodSWLng = Math.abs(neighborhood_bounds[i]._southWest.lng);
+
+    //south edge is south of nothern. north edge is north of south same w west and south
+    // part of neighborhood is north of the southernmost lat OR south of the northernmost lat
+    // AND east of the westernmost lng or west of the easternmost lng
+    if (
+      (currentHoodNELat >= currentSWBoundLat && currentHoodSWLat <= currentNEBoundLat) &&
+      (currentHoodNELng <= currentSWBoundLng && currentHoodSWLng >= currentNEBoundLng)
+    ) {
+      visibleNeighborhoods.push(i);
+    }
+  }
+  return visibleNeighborhoods;
 }
 
 // promise for getting JSON data
@@ -255,7 +252,6 @@ function LocationData(data) {
   }
   app.incidents = data;
   app.isIncidentsReady = true;
-  //console.log(data);
 
   // bind the counts to the popup
   for (let i = 0; i < neighborhood_markers.length; i++) {
@@ -303,6 +299,7 @@ function geoLocate() {
         latLng = [data[0].lat, data[0].lon];
         map = map.flyTo(latLng, 15.5);
       } else {
+        LocationData([]);
         console.log("error");
       }
     })
@@ -325,7 +322,6 @@ function handleFilters() {
     codes.push(currentTypeCodes.join(','))
   }
   codes = codes.join(',');
-  //console.log(codes);
 
   let neighborhoodNumbers = [];
   for (let i = 0; i < neighborhoods.length; i++) {
@@ -335,17 +331,13 @@ function handleFilters() {
     }
   }
   neighborhoodNumbers = neighborhoodNumbers.join(',');
-  /*console.log(neighborhoodNumbers);
-
-  console.log('Max incidents: ' + max);
-  console.log('Types: ' + types);
-  console.log('Neighborhoods: ' + neighborhoods);
-  console.log('Start Date: ' + app.start_date);
-  console.log('End Date: ' + app.end_date);
-  console.log('Start time: ' + start_time);
-  console.log('End time: ' + end_time);*/
 
   // URL will always have the default max 1k
+  // Clear seach box so moving map won't change data
+  if (!app.location_search) {
+    app.location_search = '';
+  }
+
   let url = crime_url + '/incidents?';
   url += `limit=${max}`;
 
@@ -353,8 +345,23 @@ function handleFilters() {
     url += `&code=${codes}`;
   }
 
-  if (neighborhoodNumbers) {
+  // There are 3 cases for filtering on neighborhoods, they can:
+
+  // just using UI Controls to manipulate data
+  if (neighborhoodNumbers && !app.location_search) {
     url += `&neighborhood=${neighborhoodNumbers}`;
+  
+  // searched something and did not use filter  
+  } else if (!neighborhoodNumbers && app.location_search) {
+    let visibleNeighborhoods = getVisibleNeighborhoods();
+    url += `&neighborhood=${visibleNeighborhoods.join(',')}`;
+
+  // searched something and used filter
+  } else if (neighborhoodNumbers && app.location_search) {
+    let visibleNeighborhoods = getVisibleNeighborhoods();
+    // array intersection from https://stackoverflow.com/questions/1885557/simplest-code-for-array-intersection-in-javascript
+    let actualNeighborhoods = visibleNeighborhoods.filter(value => neighborhoodNumbers.includes(value));
+    url += `&neighborhood=${actualNeighborhoods.join(',')}`;
   }
 
   if (app.start_date) {
@@ -364,11 +371,6 @@ function handleFilters() {
   if (app.end_date) {
     url += `&end_date=${app.end_date}`;
   }
-
-  //console.log(url);
-
-  // Clear seach box so moving map won't change data
-  app.location_search = '';
 
   let request = {
     url: url,
@@ -403,12 +405,60 @@ var specialMarkerLayerId;
 function addMarker(incident) {
   let streetNumber = incident.block.split(' ')[0];
   let otherParts = incident.block.split(' ');
+
   if (/\d/.test(streetNumber)) {
     streetNumber = streetNumber.replaceAll('X', '0');
+  } 
+
+  // replace X street with Xst/th/nd/rd street/ave whatever
+  if (/\d/.test(otherParts[1])) {
+    if (otherParts[1] == '11') {
+      otherParts[1] = otherParts[1] + 'th'
+    }else if (otherParts[1][otherParts.length - 1] == '1') {
+      otherParts[1] = otherParts[1] + 'st'
+    } else if (otherParts[1][otherParts.length - 1] == '2') {
+      otherParts[1] = otherParts[1] + 'nd'
+    } else if (otherParts[1][otherParts.length - 1] == '3') {
+      otherParts[1] = otherParts[1] + 'rd'
+    } else {
+      otherParts[1] = otherParts[1] + 'th'
+    }
+  }
+
+  // replace cardinal values with their full names
+  if (otherParts[otherParts.length - 1].length == 1) {
+    if (otherParts[otherParts.length - 1] == 'N') {
+      otherParts[otherParts.length - 1] = otherParts[otherParts.length - 1] + 'orth'
+    } else if (otherParts[otherParts.length - 1] == 'S') {
+      otherParts[otherParts.length - 1] = otherParts[otherParts.length - 1] + 'outh'
+    } else if (otherParts[otherParts.length - 1] == 'E') {
+      otherParts[otherParts.length - 1] = otherParts[otherParts.length - 1] + 'ast'
+    } else {
+      otherParts[otherParts.length - 1] = otherParts[otherParts.length - 1] + 'est'
+    }
   }
 
   let address = streetNumber + ' ';
   for (let i = 1; i < otherParts.length; i++) {
+    // Replace av with ave, etc.
+    if (otherParts[i] == 'AV') {
+      otherParts[i] = 'AVE';
+    } else if (otherParts[i] == 'ST') {
+      otherParts[i] = 'STREET';
+    } else if (otherParts[i] == 'BD') {
+      otherParts[i] = 'BOULEVARD';
+    }
+
+    // Problematic street names we found
+    if (otherParts[i] == 'OLDHUDSON') {
+      otherParts[i] = 'OLD HUDSON';
+    } else if (otherParts[i] == 'MISSIPPIRIVER') {
+      otherParts[i] = 'MISSISSIPPI RIVER';
+    } else if (otherParts[i] == 'CHEROKEEHTS') {
+      otherParts[i] = 'CHEROKEE HEIGHTS';
+    } else if (otherParts[i] == 'DRJUSTUSOHAGE') {
+      otherParts[i] = 'DR JUSTUS OHAGE';
+    }
     address += otherParts[i].trim() + ' ';
   }
 
@@ -417,7 +467,7 @@ function addMarker(incident) {
 
   getJSON(url)
     .then((data) => {
-      if (data) {
+      if (data.length > 0) {
         var lat = data[0].lat;
         var lng = data[0].lon;
 
