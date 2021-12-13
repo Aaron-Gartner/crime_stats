@@ -269,7 +269,14 @@ function geoLocate() {
     location = app.location_search;
   } else {
     // locations can only be in St. Paul 
-    location = app.location_search + " , St. Paul, Minnesota";
+    let parts = app.location_search.split(' ');
+    let lastPart = parts[parts.length - 1].toLowerCase();
+    if (lastPart.length === 1) {
+      parts[parts.length - 1] = '';
+    } else if (lastPart == 'north' || lastPart == 'south' || lastPart == 'east' || lastPart == 'west') {
+      parts[parts.length - 1] = '';
+    }
+    location = parts.join(' ') + " , St. Paul, Minnesota";
   }
 
   let url = `https://nominatim.openstreetmap.org/search?q=${location}&format=json&limit=25&accept-language=en`;
@@ -299,8 +306,7 @@ function geoLocate() {
         latLng = [data[0].lat, data[0].lon];
         map = map.flyTo(latLng, 15.5);
       } else {
-        LocationData([]);
-        console.log("error");
+        alert('Location is invalid');
       }
     })
     .catch((error) => {
@@ -427,15 +433,7 @@ function addMarker(incident) {
 
   // replace cardinal values with their full names
   if (otherParts[otherParts.length - 1].length == 1) {
-    if (otherParts[otherParts.length - 1] == 'N') {
-      otherParts[otherParts.length - 1] = otherParts[otherParts.length - 1] + 'orth'
-    } else if (otherParts[otherParts.length - 1] == 'S') {
-      otherParts[otherParts.length - 1] = otherParts[otherParts.length - 1] + 'outh'
-    } else if (otherParts[otherParts.length - 1] == 'E') {
-      otherParts[otherParts.length - 1] = otherParts[otherParts.length - 1] + 'ast'
-    } else {
-      otherParts[otherParts.length - 1] = otherParts[otherParts.length - 1] + 'est'
-    }
+    otherParts[otherParts.length - 1] = '';
   }
 
   let address = streetNumber + ' ';
@@ -471,6 +469,21 @@ function addMarker(incident) {
         var lat = data[0].lat;
         var lng = data[0].lon;
 
+        let boundNE = map.options.maxBounds._northEast;
+        let boundSW = map.options.maxBounds._southWest;
+
+        // if it is too far east or west, don't insert
+        if (lng > boundNE.lng || lng < boundSW.lng) {
+          alert('Marker could not be inserted');
+          return;
+        } 
+        
+        // if it is too far north or south, don't insert
+        if (lat > boundNE.lat || lat < boundSW.lat) {
+          alert('Marker could not be inserted');
+          return;
+        }
+
         // Found this icon library https://github.com/pointhi/leaflet-color-markers
         var specialIcon = new L.Icon({
           iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
@@ -483,7 +496,7 @@ function addMarker(incident) {
         popup.setContent(`<p>Case number: ${incident.case_number}</p><p>Date: ${incident.date}</p><p>Time: ${incident.time.split('.')[0]}</p><p>${incident.incident}</p><button class="ui-button" id="${specialMarkerLayerId}" onclick="removeMarker(this.id, specialMarkers)">Delete</button>`);
         specialMarker.bindPopup(popup);
       } else {
-        console.log("error");
+        alert('Marker could not be inserted');
       }
     })
     .catch((error) => {
