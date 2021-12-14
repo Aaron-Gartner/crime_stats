@@ -128,7 +128,7 @@ function init() {
   getJSON(crime_url + "/neighborhoods")
     .then((data) => {
       for (let i = 0; i < data.length; i++) {
-        app.neighborhoods[data[i].neighborhood_number] = data[i].neighborhood_name;
+        app.neighborhoods[data[i].id] = data[i].neighborhood_name;
       }
     })
     .catch((error) => {
@@ -269,14 +269,7 @@ function geoLocate() {
     location = app.location_search;
   } else {
     // locations can only be in St. Paul 
-    let parts = app.location_search.split(' ');
-    let lastPart = parts[parts.length - 1].toLowerCase();
-    if (lastPart.length === 1) {
-      parts[parts.length - 1] = '';
-    } else if (lastPart == 'north' || lastPart == 'south' || lastPart == 'east' || lastPart == 'west') {
-      parts[parts.length - 1] = '';
-    }
-    location = parts.join(' ') + " , St. Paul, Minnesota";
+    location = app.location_search + " , St. Paul, Minnesota";
   }
 
   let url = `https://nominatim.openstreetmap.org/search?q=${location}&format=json&limit=25&accept-language=en`;

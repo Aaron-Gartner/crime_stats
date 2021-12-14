@@ -59,13 +59,13 @@ app.get('/codes', (req, res) => {
 // Respond with list of neighborhood ids and their corresponding neighborhood name
 app.get('/neighborhoods', (req, res) => {
     let url = new URL(req.protocol + '://' + req.get('host') + req.originalUrl);
-    let query = "SELECT * from Neighborhoods ORDER BY neighborhood_number ASC";
+    let query = "SELECT neighborhood_number as id, neighborhood_name from Neighborhoods ORDER BY neighborhood_number ASC";
     let params;
     
     let neighborhoods = url.searchParams.get('id');
     if (neighborhoods) {
         params = neighborhoods.split(',');
-        query = "SELECT * from Neighborhoods WHERE neighborhood_number = ?";
+        query = "SELECT neighborhood_number as id, neighborhood_name from Neighborhoods WHERE neighborhood_number = ?";
 
         for (let i = 1; i < params.length; i++) {
             query += "OR neighborhood_number = ?";
