@@ -424,11 +424,6 @@ function addMarker(incident) {
     }
   }
 
-  // replace cardinal values with their full names
-  if (otherParts[otherParts.length - 1].length == 1) {
-    otherParts[otherParts.length - 1] = '';
-  }
-
   let address = streetNumber + ' ';
   for (let i = 1; i < otherParts.length; i++) {
     // Replace av with ave, etc.
